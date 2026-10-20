@@ -91,9 +91,13 @@ def pending(state):
         username = account["username"]
         empty = counts.get(username.lower(), 0) == 0
         age = now - seen.get(username.lower(), 0)
+        needs_video = any(
+            post["username"].lower() == username.lower() and not post.get("watched")
+            for post in state["posts"]
+        )
         if account.get("status") == "الحساب خاص" and empty and age < REFRESH_AFTER:
             continue
-        if empty or age >= REFRESH_AFTER:
+        if empty or needs_video or age >= REFRESH_AFTER:
             names.append(username)
     return names
 
@@ -127,9 +131,15 @@ def read_accounts(names):
     with sync_playwright() as playwright:
         browser = server.launch_browser(playwright)
         try:
+            seen = last_reads()
             for username in names:
                 log("read " + username)
                 server.sync_account(browser, username)
+                updated = json.loads(server.STORE_PATH.read_text(encoding="utf-8"))
+                push(updated, [username])
+                seen[username.lower()] = time.time()
+                STALE.write_text(json.dumps(seen), encoding="utf-8")
+                log("pushed " + username)
         finally:
             browser.close()
     return json.loads(server.STORE_PATH.read_text(encoding="utf-8"))
@@ -141,14 +151,7 @@ def once():
     if not names:
         return
     log("pending " + ",".join(names))
-    updated = read_accounts(names)
-    push(updated, names)
-    seen = last_reads()
-    now = time.time()
-    for username in names:
-        seen[username.lower()] = now
-    STALE.write_text(json.dumps(seen), encoding="utf-8")
-    log("pushed " + ",".join(names))
+    read_accounts(names)
 
 
 def main():

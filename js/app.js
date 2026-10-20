@@ -517,7 +517,7 @@ document.querySelector("#account-form").addEventListener("submit", async (event)
       return;
     }
     input.value = "";
-    showToast("بدأت متابعة الحساب");
+    showToast("بدأت قراءة الفيديوهات");
     await loadState();
   } catch (_) {
     showToast("الخادم غير متصل");

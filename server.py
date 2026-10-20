@@ -1,8 +1,10 @@
 """خادم رصد: يقرأ المنشورات الظاهرة لحساب عام ويلخص نصها."""
 
+import base64
 import json
 import os
 import re
+import subprocess
 import sys
 import threading
 import time
@@ -287,6 +289,154 @@ def shortcode_from(href):
     return match.group(1) if match else ""
 
 
+def clean_video_lines(text):
+    noise = {
+        "متابعة", "follow", "instagram", "إنستغرام", "إعجاب", "تعليق", "مشاركة",
+        "like", "comment", "share", "reels", "reel",
+    }
+    seen = []
+    for raw in (text or "").splitlines():
+        line = BIDI_RE.sub("", raw).strip(" .|•-–—:：")
+        if line == "---" or len(line) < 3:
+            continue
+        arabic = len(re.findall(r"[\u0600-\u06FF]", line))
+        latin = len(re.findall(r"[A-Za-z]", line))
+        if arabic < 2 and latin < 3:
+            continue
+        if " " not in line and len(line) <= 5:
+            continue
+        if line.casefold() in noise or HANDLE_RE.fullmatch(line):
+            continue
+        if is_time(line) or line in seen:
+            continue
+        seen.append(line)
+    return seen
+
+
+def windows_ocr(folder):
+    if sys.platform != "win32":
+        return ""
+    script = ROOT / "scripts" / "ocr.ps1"
+    if not script.exists() or not any(folder.glob("*.png")):
+        return ""
+    subprocess.run(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Folder", str(folder)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    out = folder / "ocr.txt"
+    if not out.exists():
+        return ""
+    return out.read_text(encoding="utf-8")
+
+
+def frame_folder(code):
+    folder = Path(os.environ.get("TEMP", "/tmp")) / "rasd-frames" / code
+    if folder.exists():
+        for old in folder.glob("*"):
+            old.unlink()
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
+def save_data_urls(folder, shots):
+    for index, data in enumerate(shots or []):
+        if not isinstance(data, str) or "," not in data:
+            continue
+        folder.joinpath(f"{index:02d}.png").write_bytes(base64.b64decode(data.split(",", 1)[1]))
+
+
+def video_lines(page, code):
+    ready = page.evaluate(
+        """async () => {
+          const deadline = Date.now() + 8000;
+          let video = null;
+          while (Date.now() < deadline) {
+            const found = [...document.querySelectorAll("video")];
+            video = found.sort((a, b) => (b.videoWidth * b.videoHeight) - (a.videoWidth * a.videoHeight))[0] || null;
+            if (video && video.videoWidth > 0) break;
+            await new Promise((resolve) => setTimeout(resolve, 300));
+          }
+          if (!video || !video.videoWidth) return false;
+          video.muted = true;
+          try { await video.play(); } catch (e) {}
+          return true;
+        }"""
+    )
+    folder = frame_folder(code)
+    if ready:
+        shots = page.evaluate(
+            """async () => {
+              const found = [...document.querySelectorAll("video")];
+              const video = found.sort((a, b) => (b.videoWidth * b.videoHeight) - (a.videoWidth * a.videoHeight))[0];
+              const duration = Number.isFinite(video.duration) && video.duration > 0.6 ? video.duration : 0;
+              const times = duration ? [0.12, 0.38, 0.64, 0.86].map((part) => duration * part) : [0];
+              const images = [];
+              for (const time of times) {
+                if (duration) {
+                  video.currentTime = Math.min(time, Math.max(duration - 0.05, 0));
+                  await new Promise((resolve) => {
+                    const done = () => resolve();
+                    video.addEventListener("seeked", done, { once: true });
+                    setTimeout(done, 2500);
+                  });
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext("2d").drawImage(video, 0, 0);
+                images.push(canvas.toDataURL("image/png"));
+              }
+              try { video.pause(); } catch (e) {}
+              return images;
+            }"""
+        )
+        save_data_urls(folder, shots)
+    if not any(folder.glob("*.png")):
+        for slide in range(6):
+            target = None
+            best = 0
+            try:
+                for item in page.locator("article img, main img").all():
+                    box = item.bounding_box()
+                    if not box:
+                        continue
+                    area = box["width"] * box["height"]
+                    if area > best and box["width"] > 280 and box["height"] > 280:
+                        best = area
+                        target = item
+                if target:
+                    target.screenshot(path=str(folder / f"slide-{slide:02d}.png"))
+            except Exception:
+                break
+            nxt = page.locator("[aria-label='Next'], [aria-label='التالي']")
+            if not nxt.count():
+                break
+            try:
+                nxt.first.click(timeout=1000)
+                page.wait_for_timeout(400)
+            except Exception:
+                break
+    return clean_video_lines(windows_ocr(folder))
+
+
+def summary_from_video(lines, caption):
+    video = summarize("\n".join(lines))
+    rest = [line for line in lines if line != video.get("title")]
+    video["summary"] = "\n".join(rest)
+    if caption:
+        extra = summarize(caption)
+        note = extra.get("note") or extra.get("summary") or ""
+        joined = "\n".join(lines)
+        if note and note not in joined and note != video.get("title"):
+            video["note"] = note
+        if video.get("title") in {"منشور بدون نص ظاهر", ""}:
+            video["title"] = extra.get("title") or video.get("title")
+    return video
+
+
 def read_post(page, username, href):
     code = shortcode_from(href)
     if not code:
@@ -302,7 +452,8 @@ def read_post(page, username, href):
         page.wait_for_timeout(1500)
     dismiss(page)
     when, caption = extract_caption(page.inner_text("body"), username)
-    summary = summarize(caption)
+    lines = video_lines(page, code)
+    summary = summary_from_video(lines, caption) if lines else summarize(caption)
     return {
         "id": code,
         "username": username,
@@ -311,6 +462,7 @@ def read_post(page, username, href):
         "kind": "ريل" if kind == "reel" else "منشور",
         "unread": True,
         "settled": bool(when),
+        "watched": True,
         **summary,
     }
 
@@ -397,7 +549,7 @@ def sync_account(browser, username):
             update_account(username, **fields)
             return
         with lock:
-            known = {post["id"] for post in read_store()["posts"] if post.get("settled", True)}
+            known = {post["id"] for post in read_store()["posts"] if post.get("watched")}
         fresh = [href for href in links if shortcode_from(href) not in known]
         # Keep profile order, drop duplicate hrefs.
         seen = set()
@@ -440,8 +592,16 @@ def sync_account(browser, username):
                 previous = next((item for item in data["posts"] if item["id"] == post["id"]), None)
                 if previous and previous.get("liked"):
                     post["liked"] = True
-                data["posts"] = [item for item in data["posts"] if item["id"] != post["id"]]
-                data["posts"].append(post)
+                if previous and previous.get("unread") is False:
+                    post["unread"] = False
+                if previous and previous.get("when") and post.get("when") in {"", "بتوقيت غير ظاهر"}:
+                    post["when"] = previous["when"]
+                if previous and previous.get("points") and not post.get("points"):
+                    previous["watched"] = True
+                    previous["rank"] = post["rank"]
+                else:
+                    data["posts"] = [item for item in data["posts"] if item["id"] != post["id"]]
+                    data["posts"].append(post)
                 rank = {code: index for index, code in enumerate(codes)}
                 for item in data["posts"]:
                     if item["username"].lower() == username.lower() and item["id"] in rank:

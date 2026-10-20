@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=content">
+  <link rel="stylesheet" href="css/styles.css?v=video">
   <script>
     try {
       if (JSON.parse(localStorage.getItem("rasd-prefs") || "{}").dark) {
@@ -92,13 +92,13 @@
               <span>اسم الحساب</span>
               <input id="account-input" name="username" type="text" dir="ltr" placeholder="name" autocomplete="off" required>
             </label>
-            <button class="text-btn block-btn" id="add-account" type="submit">متابعة الحساب</button>
+            <button class="text-btn block-btn" id="add-account" type="submit">إضافة الحساب</button>
           </div>
-          <p class="footnote">يُقرأ أحدث ما يظهر في الحساب العام، ويُلخَّص نص كل منشور.</p>
+          <p class="footnote">يُقرأ ما يظهر داخل الفيديو العام ويُلخَّص، من دون متابعة الحساب على إنستغرام.</p>
         </form>
 
         <section class="group">
-          <h2>الحسابات المتابَعة <span id="account-count">٠</span></h2>
+          <h2>الحسابات المضافة <span id="account-count">٠</span></h2>
           <ul id="account-list" class="inset"></ul>
         </section>
       </section>
@@ -170,7 +170,7 @@
               <svg class="chevron" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2 2 10l8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
           </div>
-          <p class="footnote">المراقبة تعمل على السيرفر كل ثماني دقائق تقريبًا. عند وصول فيديو جديد يظهر إشعار بعدده. الحسابات الخاصة تبقى خارج القراءة.</p>
+          <p class="footnote">تُقرأ الفيديوهات العامة ويُلخَّص ما يظهر داخلها، من دون متابعة الحساب. عند وصول فيديو جديد يظهر إشعار بعدده. الحسابات الخاصة تبقى خارج القراءة.</p>
         </section>
 
         <section class="group" data-group="about">
@@ -182,7 +182,7 @@
               </span>
               <span class="row-copy">
                 <strong>رصد</strong>
-                <small>ملخصات نصية لمنشورات الحسابات التي تختارها</small>
+                <small>ملخص لما يظهر داخل فيديوهات الحسابات التي تختارها</small>
               </span>
               <span class="value" dir="ltr">1.0</span>
             </div>
@@ -213,6 +213,6 @@
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="js/app.js?v=content"></script>
+  <script src="js/app.js?v=video"></script>
 </body>
 </html>
