@@ -247,12 +247,25 @@ function postCard(post) {
       ${post.subtitle ? `<p class="subtitle">${esc(post.subtitle)}</p>` : ""}
       ${body}
       ${post.note ? `<div class="note">${esc(post.note)}</div>` : ""}
-      <div class="card-actions">
-        <button class="text-btn like-btn ${post.liked ? "liked" : ""}" type="button" data-like="${esc(post.id)}" aria-pressed="${post.liked ? "true" : "false"}">${post.liked ? "معجب به" : "إعجاب"}</button>
-        <button class="text-btn" type="button" data-copy="${esc(post.id)}">نسخ النص</button>
-        <a class="text-btn" href="${esc(post.url)}" target="_blank" rel="noopener">فتح المنشور</a>
-        <button class="text-btn" type="button" data-read="${esc(post.id)}">${post.unread ? "تعليم كمقروء" : "مقروء"}</button>
-        <button class="text-btn danger" type="button" data-delete="${esc(post.id)}">حذف</button>
+      <div class="ig-actions" role="group" aria-label="إجراءات المنشور">
+        <button class="ig-btn like ${post.liked ? "on" : ""}" type="button" data-like="${esc(post.id)}" aria-pressed="${post.liked ? "true" : "false"}" aria-label="${post.liked ? "إزالة الإعجاب" : "إعجاب"}" title="إعجاب">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.2s-6.8-4.2-6.8-9.1A3.9 3.9 0 0 1 12 8.2a3.9 3.9 0 0 1 6.8 2.9c0 4.9-6.8 9.1-6.8 9.1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="ig-btn" type="button" data-copy="${esc(post.id)}" aria-label="نسخ النص" title="نسخ">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 15.5H5.2A1.8 1.8 0 0 1 3.4 13.7V5.2A1.8 1.8 0 0 1 5.2 3.4h8.5a1.8 1.8 0 0 1 1.8 1.8V6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </button>
+        <a class="ig-btn" href="${esc(post.url)}" target="_blank" rel="noopener" aria-label="فتح المنشور" title="فتح المنشور">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-9 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 13.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <button class="ig-btn" type="button" data-read="${esc(post.id)}" aria-label="${post.unread ? "تعليم كمقروء" : "مقروء"}" title="${post.unread ? "تعليم كمقروء" : "مقروء"}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 9.2 16.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="ig-btn danger" type="button" data-delete="${esc(post.id)}" aria-label="حذف" title="حذف">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M9 7V5.2A1.2 1.2 0 0 1 10.2 4h3.6A1.2 1.2 0 0 1 15 5.2V7M8 7l.8 12.2A1.2 1.2 0 0 0 10 20.4h4a1.2 1.2 0 0 0 1.2-1.2L16 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="ig-btn save ${post.liked ? "on" : ""}" type="button" data-like="${esc(post.id)}" aria-pressed="${post.liked ? "true" : "false"}" aria-label="${post.liked ? "إزالة الحفظ" : "حفظ"}" title="حفظ">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.8h11a1.2 1.2 0 0 1 1.2 1.2V21L12 16.6 5.3 21V5a1.2 1.2 0 0 1 1.2-1.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        </button>
       </div>
     </article>
   `;
@@ -279,7 +292,7 @@ function renderLikes() {
   }
   if (!likesFeed) return;
   if (!posts.length) {
-    likesFeed.innerHTML = `<div class="empty">لم تضع إعجابًا بعد. اضغط «إعجاب» على أي ملخص.</div>`;
+    likesFeed.innerHTML = `<div class="empty">لم تحفظ ملخصًا بعد. اضغط القلب أو علامة الحفظ.</div>`;
     return;
   }
   likesFeed.innerHTML = posts.map(postCard).join("");
@@ -477,6 +490,9 @@ async function onFeedClick(event) {
   const remove = event.target.closest("[data-delete]");
   const like = event.target.closest("[data-like]");
   if (like) {
+    const saved = like.classList.contains("save");
+    const wasOn = like.getAttribute("aria-pressed") === "true";
+    showToast(wasOn ? (saved ? "أُزيل الحفظ" : "أُزيل الإعجاب") : (saved ? "تم الحفظ" : "تم الإعجاب"));
     if (!apiAvailable) {
       const key = "rasd-likes";
       const ids = new Set(JSON.parse(localStorage.getItem(key) || "[]"));

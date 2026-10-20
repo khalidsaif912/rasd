@@ -422,6 +422,32 @@ html.dark .age { color: #ffb340; }
 }
 .card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .card-actions .text-btn.danger { color: #ff3b30; }
+.ig-actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 8px;
+}
+.ig-btn {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  border-radius: 50%;
+  padding: 0;
+  text-decoration: none;
+}
+.ig-btn svg { width: 24px; height: 24px; }
+.ig-btn:hover { background: var(--fill); }
+.ig-btn:active { transform: scale(0.9); }
+.ig-btn.save { margin-inline-start: auto; }
+.ig-btn.like.on { color: #ff3040; }
+.ig-btn.save.on { color: var(--text); }
+.ig-btn.on svg path { fill: currentColor; }
+.ig-btn.danger { color: #ff3b30; }
 .verified {
   display: inline-grid;
   place-items: center;
@@ -539,17 +565,8 @@ html.dark .toast { background: rgba(242, 242, 247, 0.94); color: #1c1c1e; }
   .meta { min-width: 0; }
   .meta > span { min-width: 0; }
   .meta strong, .handle { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .card-actions .text-btn {
-    display: grid;
-    place-items: center;
-    min-height: 44px;
-    background: var(--fill);
-    border-radius: 10px;
-    text-align: center;
-    padding: 8px 6px;
-    font-size: 0.85rem;
-  }
+  .ig-actions { gap: 0; }
+  .ig-btn { width: 44px; height: 44px; }
   .toolbar { align-items: stretch; flex-direction: column; }
   .filters { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; padding-bottom: 4px; }
   .chip { flex: none; min-height: 40px; }
@@ -610,7 +627,6 @@ html.dark .toast { background: rgba(242, 242, 247, 0.94); color: #1c1c1e; }
 @media (max-width: 380px) {
   .content, .app.sidebar-closed .content { padding-inline-end: 10px; padding-inline-start: 26px; }
   h1 { font-size: 1.3rem; }
-  .card-actions { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
