@@ -74,6 +74,8 @@ def write_store(data):
 
 
 def update_account(username, **fields):
+    if not fields.get("name"):
+        fields.pop("name", None)
     with lock:
         data = read_store()
         for account in data["accounts"]:
@@ -252,9 +254,9 @@ def sync_account(browser, username):
     page = browser.new_page(locale="ar", viewport={"width": 1280, "height": 900})
     try:
         links, title, verified, body = profile_links(page, username)
-        name = username
+        name = ""
         if "(@" in title:
-            name = title.split("(@", 1)[0].strip(" -•") or username
+            name = title.split("(@", 1)[0].strip(" -•")
         if "Sorry" in body or "الصفحة غير متاحة" in body or "غير متوفرة" in body:
             update_account(username, syncing=False, status="الحساب غير موجود", name=name, verified=verified)
             return
@@ -265,8 +267,18 @@ def sync_account(browser, username):
                 codes.append(code)
         if not codes:
             private = "خاص" in body or "This account is private" in body
-            status = "الحساب خاص" if private else "لم تظهر منشورات في الصفحة العامة"
-            update_account(username, syncing=False, status=status, name=name, verified=verified)
+            with lock:
+                has_posts = any(post["username"].lower() == username.lower() for post in read_store()["posts"])
+            if private:
+                status = "الحساب خاص"
+            elif has_posts:
+                status = "تعذر تحديث الصفحة، الملخصات السابقة محفوظة"
+            else:
+                status = "لم تظهر منشورات في الصفحة العامة"
+            fields = {"syncing": False, "status": status, "verified": verified}
+            if name:
+                fields["name"] = name
+            update_account(username, **fields)
             return
         with lock:
             known = {post["id"] for post in read_store()["posts"] if post.get("settled", True)}
