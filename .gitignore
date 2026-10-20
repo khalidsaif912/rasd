@@ -1,0 +1,7 @@
+data/store.json
+__pycache__/
+*.pyc
+_probe*
+_parse_out.txt
+_fail.txt
+_state.txt

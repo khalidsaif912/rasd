@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>رصد — الإعدادات</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    try {
+      if (JSON.parse(localStorage.getItem("rasd-prefs") || "{}").dark) {
+        document.documentElement.classList.add("dark");
+      }
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <div class="app">
+    <button class="scrim" id="sidebar-scrim" type="button" aria-label="إغلاق القائمة" hidden></button>
+    <button class="galaxy-handle" id="sidebar-toggle" type="button" aria-expanded="true" aria-controls="sidebar">
+      <span class="sr-only">القائمة</span>
+      <svg class="galaxy-chevron" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2 2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <aside class="sidebar" id="sidebar">
+      <p class="sidebar-kicker">رصد</p>
+      <nav class="sidenav" aria-label="أقسام التطبيق">
+        <button class="nav-item active" type="button" data-nav="summaries">
+          <span class="sq blue" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </span>
+          <span>الملخصات</span>
+          <span class="badge" data-badge hidden>0</span>
+        </button>
+        <button class="nav-item" type="button" data-nav="accounts">
+          <span class="sq green" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 18c1.2-2.4 3-3.6 6-3.6S16.8 15.6 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </span>
+          <span>الحسابات</span>
+        </button>
+        <button class="nav-item" type="button" data-nav="settings">
+          <span class="sq gray" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </span>
+          <span>الإعدادات</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <button id="arrival" class="arrival" type="button" hidden>
+        <b id="arrival-count">0</b>
+        <span id="arrival-label">فيديوهات جديدة</span>
+      </button>
+      <header class="content-head">
+        <div>
+          <p class="eyebrow">رصد</p>
+          <h1 id="view-title">الملخصات</h1>
+        </div>
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="sr-only">بحث</span>
+          <input id="search" type="search" placeholder="بحث" autocomplete="off">
+        </label>
+      </header>
+
+      <section id="view-summaries" class="view">
+        <div class="toolbar">
+          <div id="filters" class="filters" role="tablist" aria-label="تصفية الحسابات"></div>
+          <button class="text-btn" id="refresh-all" type="button">تحديث</button>
+        </div>
+        <div id="feed" class="feed"></div>
+      </section>
+
+      <section id="view-accounts" class="view" hidden>
+        <form id="account-form" class="group">
+          <h2>إضافة حساب</h2>
+          <div class="card-block">
+            <label class="field">
+              <span>اسم الحساب</span>
+              <input id="account-input" name="username" type="text" dir="ltr" placeholder="name" autocomplete="off" required>
+            </label>
+            <button class="text-btn block-btn" id="add-account" type="submit">متابعة الحساب</button>
+          </div>
+          <p class="footnote">يُقرأ أحدث ما يظهر في الحساب العام، ويُلخَّص نص كل منشور.</p>
+        </form>
+
+        <section class="group">
+          <h2>الحسابات المتابَعة <span id="account-count">٠</span></h2>
+          <ul id="account-list" class="inset"></ul>
+        </section>
+      </section>
+
+      <section id="view-settings" class="view" hidden>
+        <section class="group" data-group="appearance">
+          <h2>المظهر</h2>
+          <div class="inset">
+            <div class="row" data-search="الوضع الداكن مظهر ليلي">
+              <span class="sq indigo" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M15 3.5A8 8 0 1 0 20.5 14 6.5 6.5 0 0 1 15 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="row-copy">
+                <strong>الوضع الداكن</strong>
+                <small>خلفية داكنة ونص فاتح</small>
+              </span>
+              <button class="switch" id="toggle-dark" type="button" role="switch" aria-checked="false" aria-label="الوضع الداكن"></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="group" data-group="reading">
+          <h2>الملخصات</h2>
+          <div class="inset">
+            <div class="row" data-search="غير المقروء إخفاء المقروء">
+              <span class="sq orange" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/></svg>
+              </span>
+              <span class="row-copy">
+                <strong>غير المقروء فقط</strong>
+                <small>إخفاء الملخصات التي علّمتها كمقروءة</small>
+              </span>
+              <button class="switch" id="toggle-unread" type="button" role="switch" aria-checked="false" aria-label="غير المقروء فقط"></button>
+            </div>
+            <div class="row" data-search="عرض مضغوط نص أقصر">
+              <span class="sq blue" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              <span class="row-copy">
+                <strong>عرض مضغوط</strong>
+                <small>عناوين أوضح ومساحة أقل بين الملخصات</small>
+              </span>
+              <button class="switch" id="toggle-compact" type="button" role="switch" aria-checked="false" aria-label="عرض مضغوط"></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="group" data-group="watch">
+          <h2>المراقبة</h2>
+          <div class="inset">
+            <div class="row" data-search="تحديث تلقائي مزامنة">
+              <span class="sq green" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-13.5 5.8M4 12a8 8 0 0 1 13.5-5.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 5h2.5V7.5M8 19H5.5V16.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="row-copy">
+                <strong>تحديث تلقائي</strong>
+                <small>جلب حالة الملخصات كل بضع ثوانٍ</small>
+              </span>
+              <button class="switch" id="toggle-refresh" type="button" role="switch" aria-checked="true" aria-label="تحديث تلقائي"></button>
+            </div>
+            <button class="row button-row" id="settings-refresh" type="button" data-search="تحديث الآن إعادة القراءة">
+              <span class="sq blue" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-13.5 5.8M4 12a8 8 0 0 1 13.5-5.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 5h2.5V7.5M8 19H5.5V16.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="row-copy">
+                <strong>تحديث الآن</strong>
+                <small>قراءة المنشورات الجديدة من الحسابات</small>
+              </span>
+              <svg class="chevron" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2 2 10l8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <p class="footnote">يُراجع كل حساب عام كل ثماني دقائق تقريبًا. عند وصول فيديو جديد يظهر إشعار بعدده. الحسابات الخاصة تبقى خارج القراءة.</p>
+        </section>
+
+        <section class="group" data-group="about">
+          <h2>حول</h2>
+          <div class="inset">
+            <div class="row" data-search="رصد إصدار">
+              <span class="sq gray" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v5M12 8h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              <span class="row-copy">
+                <strong>رصد</strong>
+                <small>ملخصات نصية لمنشورات الحسابات التي تختارها</small>
+              </span>
+              <span class="value" dir="ltr">1.0</span>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <nav class="tabbar" aria-label="تنقل الجوال">
+    <button class="tab active" type="button" data-nav="summaries">
+      <svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span class="badge" data-badge hidden>0</span>
+      الملخصات
+    </button>
+    <button class="tab" type="button" data-nav="accounts">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 18c1.2-2.4 3-3.6 6-3.6S16.8 15.6 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      الحسابات
+    </button>
+    <button class="tab" type="button" data-nav="settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      الإعدادات
+    </button>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="js/app.js"></script>
+</body>
+</html>
