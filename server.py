@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent
 STORE_PATH = ROOT / "data" / "store.json"
+ALLOWED_ORIGIN = "https://khalidsaif912.github.io"
 HOST = "127.0.0.1"
 PORT = 8777
 
@@ -331,12 +332,13 @@ def sync_account(browser, username):
 
 
 def launch_browser(playwright):
+    args = ["--disable-dev-shm-usage"]
     for channel in ("msedge", "chrome"):
         try:
-            return playwright.chromium.launch(channel=channel, headless=True)
+            return playwright.chromium.launch(channel=channel, headless=True, args=args)
         except Exception:
             continue
-    return playwright.chromium.launch(headless=True)
+    return playwright.chromium.launch(headless=True, args=args)
 
 
 def worker():
@@ -382,7 +384,17 @@ class Handler(SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
+        origin = self.headers.get("Origin")
+        if origin == ALLOWED_ORIGIN:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Vary", "Origin")
         super().end_headers()
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.end_headers()
 
     def send_json(self, payload, status=200):
         raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")

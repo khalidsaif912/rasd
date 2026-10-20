@@ -1,0 +1,15 @@
+[Unit]
+Description=Rasd Instagram monitor
+After=network-online.target
+
+[Service]
+Type=simple
+User=rasd
+Group=rasd
+WorkingDirectory=/opt/rasd
+ExecStart=/opt/rasd/venv/bin/python server.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

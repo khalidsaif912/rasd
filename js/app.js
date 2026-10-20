@@ -2,6 +2,12 @@ const PREFS_KEY = "rasd-prefs";
 const SEEN_KEY = "rasd-seen-ids";
 const eastern = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
 const iconColors = ["blue", "green", "orange", "purple", "pink", "teal", "indigo"];
+const API_ROOT = location.hostname.endsWith("github.io") ? "https://rasd.158-220-106-38.sslip.io/" : "";
+
+function apiUrl(path) {
+  return API_ROOT + path;
+}
+
 const titles = { summaries: "الملخصات", accounts: "الحسابات", settings: "الإعدادات" };
 
 let state = { accounts: [], posts: [] };
@@ -310,13 +316,6 @@ function cleanUsername(value) {
   return /^[A-Za-z0-9._]{1,30}$/.test(text) ? text : "";
 }
 
-function githubIssue(title) {
-  const url = new URL("https://github.com/khalidsaif912/rasd/issues/new");
-  url.searchParams.set("title", title);
-  url.searchParams.set("body", "متابعة من موقع رصد");
-  window.open(url.toString(), "_blank", "noopener");
-}
-
 function applyLocalEdits() {
   if (apiAvailable) return;
   const hidden = new Set(JSON.parse(localStorage.getItem("rasd-hidden") || "[]"));
@@ -330,7 +329,7 @@ function applyLocalEdits() {
 async function loadState() {
   let response = null;
   try {
-    response = await fetch("api/state", { cache: "no-store" });
+    response = await fetch(apiUrl("api/state"), { cache: "no-store" });
   } catch (_) {
     response = null;
   }
@@ -376,14 +375,12 @@ document.querySelector("#account-form").addEventListener("submit", async (event)
     return;
   }
   if (!apiAvailable) {
-    githubIssue(`account: ${username}`);
-    input.value = "";
-    showToast("أكّد الإضافة في الصفحة التي فُتحت");
+    showToast("السيرفر غير متصل");
     return;
   }
   button.disabled = true;
   try {
-    const response = await fetch("api/accounts", {
+    const response = await fetch(apiUrl("api/accounts"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username }),
@@ -405,11 +402,11 @@ document.querySelector("#account-form").addEventListener("submit", async (event)
 
 async function refreshNow() {
   if (!apiAvailable) {
-    showToast("خوادم GitHub تراجع الحسابات كل ساعة");
-    loadState().catch(() => {});
-    return;
-  }
-  await fetch("api/refresh", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      showToast("الخادم يراجع الحسابات كل ثماني دقائق");
+      loadState().catch(() => {});
+      return;
+    }
+  await fetch(apiUrl("api/refresh"), { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   showToast("بدأ التحديث");
   loadState();
 }
@@ -434,11 +431,10 @@ accountList.addEventListener("click", async (event) => {
   const open = event.target.closest("[data-open-account]");
   if (remove) {
     if (!apiAvailable) {
-      githubIssue(`remove: ${remove.dataset.removeAccount}`);
-      showToast("أكّد الإزالة في الصفحة التي فُتحت");
+      showToast("السيرفر غير متصل");
       return;
     }
-    await fetch(`api/accounts?username=${encodeURIComponent(remove.dataset.removeAccount)}`, { method: "DELETE" });
+    await fetch(apiUrl(`api/accounts?username=${encodeURIComponent(remove.dataset.removeAccount)}`), { method: "DELETE" });
     await loadState();
     return;
   }
@@ -467,7 +463,7 @@ feed.addEventListener("click", async (event) => {
       await loadState();
       return;
     }
-    await fetch("api/seen", {
+    await fetch(apiUrl("api/seen"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: read.dataset.read, toggle: true }),
@@ -483,7 +479,7 @@ feed.addEventListener("click", async (event) => {
       await loadState();
       return;
     }
-    await fetch(`api/posts?id=${encodeURIComponent(remove.dataset.delete)}`, { method: "DELETE" });
+    await fetch(apiUrl(`api/posts?id=${encodeURIComponent(remove.dataset.delete)}`), { method: "DELETE" });
     await loadState();
   }
 });
