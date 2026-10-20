@@ -267,12 +267,15 @@ def sync_account(browser, username):
                 codes.append(code)
         if not codes:
             private = "خاص" in body or "This account is private" in body
+            blocked = any(marker in body for marker in ("تسجيل الدخول", "Log in", "Log into Instagram", "See everyday moments"))
             with lock:
                 has_posts = any(post["username"].lower() == username.lower() for post in read_store()["posts"])
             if private:
                 status = "الحساب خاص"
             elif has_posts:
                 status = "تعذر تحديث الصفحة، الملخصات السابقة محفوظة"
+            elif blocked:
+                status = "إنستغرام لم يظهر منشورات الحساب للسيرفر"
             else:
                 status = "لم تظهر منشورات في الصفحة العامة"
             fields = {"syncing": False, "status": status, "verified": verified}
