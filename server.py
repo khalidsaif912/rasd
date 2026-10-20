@@ -279,7 +279,7 @@ def profile_links(page, username):
     title = BIDI_RE.sub("", page.title())
     verified = page.locator("[aria-label='Verified'], [aria-label='موثّق']").count() > 0
     body = page.inner_text("body")
-    return links, title, verified, body
+    return links, title, verified, body, page.url
 
 
 def shortcode_from(href):
@@ -319,7 +319,7 @@ def sync_account(browser, username):
     update_account(username, syncing=True, status="يقرأ الحساب")
     page = browser.new_page(locale="ar", viewport={"width": 1280, "height": 900})
     try:
-        links, title, verified, body = profile_links(page, username)
+        links, title, verified, body, page_url = profile_links(page, username)
         name = ""
         if "(@" in title:
             name = title.split("(@", 1)[0].strip(" -•")
@@ -332,8 +332,16 @@ def sync_account(browser, username):
             if code and code not in codes:
                 codes.append(code)
         if not codes:
-            private = "خاص" in body or "This account is private" in body
-            blocked = any(marker in body for marker in ("تسجيل الدخول", "Log in", "Log into Instagram", "See everyday moments"))
+            blocked = (
+                "/accounts/login" in page_url
+                or "is_from_rle" in page_url
+                or any(marker in body for marker in ("تسجيل الدخول", "Log in", "Log into Instagram", "See everyday moments"))
+            )
+            private = (not blocked) and (
+                "This account is private" in body
+                or "This Account is Private" in body
+                or "هذا الحساب خاص" in body
+            )
             if not private:
                 found = indexed_codes(username)
                 posts = []
@@ -378,9 +386,9 @@ def sync_account(browser, username):
             if private:
                 status = "الحساب خاص"
             elif has_posts:
-                status = "تعذر تحديث الصفحة، الملخصات السابقة محفوظة"
+                status = "محدّث" if blocked else "تعذر تحديث الصفحة، الملخصات السابقة محفوظة"
             elif blocked:
-                status = "إنستغرام لم يظهر منشورات الحساب للسيرفر"
+                status = "تُجلب المنشورات الآن"
             else:
                 status = "لم تظهر منشورات في الصفحة العامة"
             fields = {"syncing": False, "status": status, "verified": verified}
