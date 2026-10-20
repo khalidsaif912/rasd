@@ -483,6 +483,20 @@ html.dark .age { color: #ffb340; }
   text-align: start;
   cursor: pointer;
 }
+.account-actions { display: flex; align-items: center; gap: 2px; flex: none; }
+.account-row .similar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding-inline: 8px;
+  border-radius: 10px;
+  color: var(--blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+.account-row .similar svg { width: 18px; height: 18px; flex: none; }
+.account-row .similar:hover { background: rgba(0, 122, 255, 0.1); }
 .account-row .remove { flex: none; min-height: 44px; padding-inline: 10px; }
 
 .badge {
@@ -571,12 +585,13 @@ html.dark .toast { background: rgba(242, 242, 247, 0.94); color: #1c1c1e; }
   .filters { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; padding-bottom: 4px; }
   .chip { flex: none; min-height: 40px; }
   .field input, .block-btn, .remove { min-height: 44px; }
-  .account-row { flex-direction: column; align-items: stretch; gap: 4px; }
+  .account-row { flex-wrap: wrap; align-items: center; gap: 4px; }
   .account-open { width: 100%; }
+  .account-actions { width: 100%; justify-content: flex-end; }
   .row-copy strong { white-space: normal; overflow-wrap: break-word; }
-  .account-row .remove {
-    align-self: stretch;
-    text-align: center;
+  .account-row .similar, .account-row .remove {
+    min-height: 44px;
+    padding-inline: 12px;
     background: var(--fill);
     border-radius: 10px;
   }

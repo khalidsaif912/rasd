@@ -183,6 +183,12 @@ function visiblePosts() {
   });
 }
 
+function similarSearchUrl(account) {
+  const name = (account.name || "").trim();
+  const query = name && name.toLowerCase() !== account.username.toLowerCase() ? name : account.username;
+  return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(query)}`;
+}
+
 function renderAccounts() {
   const q = view === "accounts" ? query.trim().toLowerCase() : "";
   const accounts = state.accounts.filter((account) => {
@@ -206,7 +212,13 @@ function renderAccounts() {
           </span>
           <svg class="chevron" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2 2 10l8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <button class="remove" type="button" data-remove-account="${esc(account.username)}">إزالة</button>
+        <div class="account-actions">
+          <a class="similar" href="${similarSearchUrl(account)}" target="_blank" rel="noopener" aria-label="بحث عن حسابات شبيهة في إنستغرام">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.2 15.2 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            شبيهة
+          </a>
+          <button class="remove" type="button" data-remove-account="${esc(account.username)}">إزالة</button>
+        </div>
       </div>
     </li>
   `).join("");
