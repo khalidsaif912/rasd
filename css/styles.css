@@ -496,6 +496,8 @@ html.dark .age { color: #ffb340; }
   text-decoration: none;
 }
 .account-row .similar svg { width: 18px; height: 18px; flex: none; }
+.account-row .similar span { max-width: 9.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-row .similar.is-disabled { opacity: 0.4; }
 .account-row .similar:hover { background: rgba(0, 122, 255, 0.1); }
 .account-row .remove { flex: none; min-height: 44px; padding-inline: 10px; }
 

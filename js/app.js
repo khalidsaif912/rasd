@@ -183,10 +183,83 @@ function visiblePosts() {
   });
 }
 
+const CONTENT_STOP = new Set("مع من في على علي كل ما مش هو هي هذا هذه عن الى الي او ثم كان كانت شو قبل بعد مره عم مين كيف الناس لازم بدي انا اللي الذي التي لا لم لن قد بين حتى عند بدون غير مثل متل بس لان هيدا هيدي يا بدنا فيه فيها ذلك شي شيء مو رح كمان فقط هنا هناك جدا ايضا اليوم يوم ايام ليل ليله ليلتين مع ان تم هم هن انت نحن دي دا ال ب ل و مرة بحياته مهمه سريعه نصيحه اختار شوف لازم بتمنى اكتر اكثر الكتب كتاب خمس خمسه اشياء شيء يكون تكون لقد هناك".split(/\s+/));
+
+function normalizeWord(value) {
+  return (value || "")
+    .replace(/[\u064B-\u0652\u0640]/g, "")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .toLowerCase();
+}
+
+function contentStem(raw) {
+  let word = normalizeWord(raw).replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+  if (!word || /^\d+$/.test(word)) return "";
+  word = word.replace(/^(وال|بال|لل|عال|ال|و|ب|ل)/, "");
+  word = word.replace(/(نا|ون|ين|ها|ه)$/, "");
+  if (word.length < 3 || CONTENT_STOP.has(word)) return "";
+  if (/^طفل|^اطفال/.test(word)) return "أطفال";
+  if (word.includes("مدرس")) return "مدرسة";
+  if (/تعلم|تعليم/.test(word)) return "تعليم";
+  if (word.includes("انشط")) return "أنشطة";
+  if (word.includes("لعب") || word.includes("العاب")) return "ألعاب";
+  if (word.includes("طالب")) return "طلاب";
+  if (word.includes("والد") || word.includes("اهل")) return "تربية";
+  if (/^[a-z]{1,2}$/.test(word)) return "";
+  return word;
+}
+
+function contentPieces(post) {
+  const bits = [post.title, post.subtitle, post.summary, post.note];
+  (post.points || []).forEach((point) => bits.push(point.name, point.advice));
+  return bits.filter(Boolean).join(" ");
+}
+
+function contentTopic(account) {
+  const posts = state.posts.filter((post) => post.username === account.username);
+  const blocked = new Set(
+    `${account.name || ""} ${account.username || ""}`
+      .split(/[^\p{L}\p{N}]+/u)
+      .map(contentStem)
+      .filter(Boolean)
+  );
+  const counts = new Map();
+  posts.forEach((post) => {
+    const seen = new Set();
+    contentPieces(post).split(/[^\p{L}\p{N}]+/u).forEach((part) => {
+      const stem = contentStem(part);
+      if (!stem || blocked.has(stem) || seen.has(stem)) return;
+      seen.add(stem);
+      counts.set(stem, (counts.get(stem) || 0) + 1);
+    });
+  });
+  const ranked = [...counts.entries()]
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .map(([stem]) => stem);
+  const labels = [...new Set(ranked)].slice(0, 4);
+  if (labels.includes("تعليم") && labels.includes("أطفال")) return "تعليم الأطفال";
+  if (labels.includes("مدرسة") && labels.includes("أطفال")) return "مدرسة الأطفال";
+  if (labels.includes("أنشطة") && labels.includes("أطفال")) return "أنشطة للأطفال";
+  if (labels.includes("ألعاب") && labels.includes("أطفال")) return "ألعاب للأطفال";
+  if (labels.includes("طلاب") && labels.includes("مدرسة")) return "طلاب المدارس";
+  if (labels.includes("أطفال")) {
+    const other = labels.find((item) => item !== "أطفال");
+    return other ? `${other} للأطفال` : "تربية الأطفال";
+  }
+  if (labels.length) return labels.slice(0, 3).join(" ");
+  const newest = posts.find((post) => (post.title || "").trim());
+  if (!newest) return "";
+  const title = newest.title.replace(/[.\u2026]{2,}/g, " ").replace(/\s+/g, " ").trim();
+  return title.length > 48 ? title.slice(0, 48).replace(/\s+\S*$/, "") : title;
+}
+
 function similarSearchUrl(account) {
-  const name = (account.name || "").trim();
-  const query = name && name.toLowerCase() !== account.username.toLowerCase() ? name : account.username;
-  return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(query)}`;
+  const topic = contentTopic(account);
+  if (!topic) return "";
+  return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(topic)}`;
 }
 
 function renderAccounts() {
@@ -213,10 +286,12 @@ function renderAccounts() {
           <svg class="chevron" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2 2 10l8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="account-actions">
-          <a class="similar" href="${similarSearchUrl(account)}" target="_blank" rel="noopener" aria-label="بحث عن حسابات شبيهة في إنستغرام">
+          ${similarSearchUrl(account)
+            ? `<a class="similar" href="${similarSearchUrl(account)}" target="_blank" rel="noopener" title="بحث عن حسابات بنفس المحتوى: ${esc(contentTopic(account))}" aria-label="بحث عن حسابات بنفس المحتوى: ${esc(contentTopic(account))}">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.2 15.2 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            شبيهة
-          </a>
+            <span>${esc(contentTopic(account))}</span>
+          </a>`
+            : `<span class="similar is-disabled" title="لا يوجد محتوى بعد">شبيهة</span>`}
           <button class="remove" type="button" data-remove-account="${esc(account.username)}">إزالة</button>
         </div>
       </div>
