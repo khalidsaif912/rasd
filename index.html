@@ -33,6 +33,12 @@
           <span>الملخصات</span>
           <span class="badge" data-badge hidden>0</span>
         </button>
+        <button class="nav-item" type="button" data-nav="likes">
+          <span class="sq pink" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          </span>
+          <span>الإعجابات</span>
+        </button>
         <button class="nav-item" type="button" data-nav="accounts">
           <span class="sq green" aria-hidden="true">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 18c1.2-2.4 3-3.6 6-3.6S16.8 15.6 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -71,6 +77,11 @@
           <button class="text-btn" id="refresh-all" type="button">تحديث</button>
         </div>
         <div id="feed" class="feed"></div>
+      </section>
+
+      <section id="view-likes" class="view" hidden>
+        <p class="footnote" id="likes-count">الملخصات التي وضعت عليها إعجابًا.</p>
+        <div id="likes-feed" class="feed"></div>
       </section>
 
       <section id="view-accounts" class="view" hidden>
@@ -186,6 +197,10 @@
       <svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <span class="badge" data-badge hidden>0</span>
       الملخصات
+    </button>
+    <button class="tab" type="button" data-nav="likes">
+      <svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 4.6-7 9-7 9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      إعجاب
     </button>
     <button class="tab" type="button" data-nav="accounts">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 18c1.2-2.4 3-3.6 6-3.6S16.8 15.6 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>

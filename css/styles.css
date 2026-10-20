@@ -359,6 +359,8 @@ html.compact .feed { gap: 8px; }
   transition: transform 0.18s ease;
 }
 .card.unread { border-inline-start: 3px solid var(--blue); }
+.card.liked { border-inline-start: 3px solid #ff2d55; }
+.like-btn.liked { color: #ff2d55; }
 html.compact .card { padding: 12px 14px; }
 html.compact .points p,
 html.compact .summary { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -572,7 +574,7 @@ html.dark .toast { background: rgba(242, 242, 247, 0.94); color: #1c1c1e; }
   .search { width: 100%; }
   .tabbar {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     position: fixed;
     inset-inline: 0;
     bottom: 0;

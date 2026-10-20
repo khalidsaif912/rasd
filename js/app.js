@@ -8,7 +8,7 @@ function apiUrl(path) {
   return API_ROOT + path;
 }
 
-const titles = { summaries: "الملخصات", accounts: "الحسابات", settings: "الإعدادات" };
+const titles = { summaries: "الملخصات", likes: "الإعجابات", accounts: "الحسابات", settings: "الإعدادات" };
 
 let state = { accounts: [], posts: [] };
 let filter = "all";
@@ -21,6 +21,8 @@ let seenIds = loadSeen();
 let arrivalsReady = localStorage.getItem(SEEN_KEY) !== null;
 
 const feed = document.querySelector("#feed");
+const likesFeed = document.querySelector("#likes-feed");
+const likesCount = document.querySelector("#likes-count");
 const accountList = document.querySelector("#account-list");
 const filters = document.querySelector("#filters");
 const accountCount = document.querySelector("#account-count");
@@ -163,17 +165,21 @@ async function copyText(post) {
   showToast("تم نسخ الملخص");
 }
 
-function visiblePosts() {
+function queryMatch(post) {
   const q = query.trim().toLowerCase();
+  if (!q || (view !== "summaries" && view !== "likes")) return true;
+  const blob = [
+    post.title, post.subtitle, post.note, post.summary, post.username,
+    ...(post.points || []).flatMap((point) => [point.name, point.age, point.advice]),
+  ].join(" ").toLowerCase();
+  return blob.includes(q);
+}
+
+function visiblePosts() {
   return state.posts.filter((post) => {
     if (prefs.unreadOnly && !post.unread) return false;
     if (filter !== "all" && post.username !== filter) return false;
-    if (!q || view !== "summaries") return true;
-    const blob = [
-      post.title, post.subtitle, post.note, post.summary, post.username,
-      ...(post.points || []).flatMap((point) => [point.name, point.age, point.advice]),
-    ].join(" ").toLowerCase();
-    return blob.includes(q);
+    return view !== "summaries" || queryMatch(post);
   });
 }
 
@@ -212,6 +218,46 @@ function renderAccounts() {
   filters.innerHTML = chips.join("");
 }
 
+function postCard(post) {
+  const account = state.accounts.find((item) => item.username === post.username);
+  const points = (post.points || []).map((point, index) => `
+    <li>
+      <span class="index">${toEastern(index + 1)}</span>
+      <div>
+        <strong>${esc(point.name)}</strong>
+        ${point.advice ? `<p>${esc(point.advice)}</p>` : ""}
+      </div>
+      ${point.age ? `<span class="age" dir="ltr">${esc(point.age)}</span>` : ""}
+    </li>
+  `).join("");
+  const body = points
+    ? `<ol class="points">${points}</ol>`
+    : `<p class="summary">${esc(post.summary || "")}</p>`;
+  return `
+    <article class="card ${post.unread ? "unread" : ""} ${post.liked ? "liked" : ""}">
+      <div class="meta">
+        <span class="avatar sq ${colorFor(post.username)}">${esc(initials(post.username))}</span>
+        <span>
+          <strong dir="ltr">${esc(post.username)}</strong>
+          ${account && account.verified ? '<span class="verified" title="موثّق">✓</span>' : ""}
+          <span class="handle">${esc(post.when || "")} · ${esc(post.kind || "منشور")}</span>
+        </span>
+      </div>
+      <h3>${esc(post.title || "")}</h3>
+      ${post.subtitle ? `<p class="subtitle">${esc(post.subtitle)}</p>` : ""}
+      ${body}
+      ${post.note ? `<div class="note">${esc(post.note)}</div>` : ""}
+      <div class="card-actions">
+        <button class="text-btn like-btn ${post.liked ? "liked" : ""}" type="button" data-like="${esc(post.id)}" aria-pressed="${post.liked ? "true" : "false"}">${post.liked ? "معجب به" : "إعجاب"}</button>
+        <button class="text-btn" type="button" data-copy="${esc(post.id)}">نسخ النص</button>
+        <a class="text-btn" href="${esc(post.url)}" target="_blank" rel="noopener">فتح المنشور</a>
+        <button class="text-btn" type="button" data-read="${esc(post.id)}">${post.unread ? "تعليم كمقروء" : "مقروء"}</button>
+        <button class="text-btn danger" type="button" data-delete="${esc(post.id)}">حذف</button>
+      </div>
+    </article>
+  `;
+}
+
 function renderFeed() {
   const syncing = state.accounts.some((account) => account.syncing);
   const posts = visiblePosts();
@@ -222,46 +268,21 @@ function renderFeed() {
     feed.innerHTML = `<div class="empty">${message}</div>`;
     return;
   }
+  feed.innerHTML = posts.map(postCard).join("");
+}
 
-  feed.innerHTML = posts.map((post) => {
-    const account = state.accounts.find((item) => item.username === post.username);
-    const points = (post.points || []).map((point, index) => `
-      <li>
-        <span class="index">${toEastern(index + 1)}</span>
-        <div>
-          <strong>${esc(point.name)}</strong>
-          ${point.advice ? `<p>${esc(point.advice)}</p>` : ""}
-        </div>
-        ${point.age ? `<span class="age" dir="ltr">${esc(point.age)}</span>` : ""}
-      </li>
-    `).join("");
-    const body = points
-      ? `<ol class="points">${points}</ol>`
-      : `<p class="summary">${esc(post.summary || "")}</p>`;
-
-    return `
-      <article class="card ${post.unread ? "unread" : ""}">
-        <div class="meta">
-          <span class="avatar sq ${colorFor(post.username)}">${esc(initials(post.username))}</span>
-          <span>
-            <strong dir="ltr">${esc(post.username)}</strong>
-            ${account && account.verified ? '<span class="verified" title="موثّق">✓</span>' : ""}
-            <span class="handle">${esc(post.when || "")} · ${esc(post.kind || "منشور")}</span>
-          </span>
-        </div>
-        <h3>${esc(post.title || "")}</h3>
-        ${post.subtitle ? `<p class="subtitle">${esc(post.subtitle)}</p>` : ""}
-        ${body}
-        ${post.note ? `<div class="note">${esc(post.note)}</div>` : ""}
-        <div class="card-actions">
-          <button class="text-btn" type="button" data-copy="${esc(post.id)}">نسخ النص</button>
-          <a class="text-btn" href="${esc(post.url)}" target="_blank" rel="noopener">فتح المنشور</a>
-          <button class="text-btn" type="button" data-read="${esc(post.id)}">${post.unread ? "تعليم كمقروء" : "مقروء"}</button>
-          <button class="text-btn danger" type="button" data-delete="${esc(post.id)}">حذف</button>
-        </div>
-      </article>
-    `;
-  }).join("");
+function renderLikes() {
+  const posts = state.posts.filter((post) => post.liked && queryMatch(post));
+  if (likesCount) {
+    const label = posts.length === 1 ? "ملخص واحد أعجبك" : posts.length === 2 ? "ملخصان أعجبك" : posts.length ? `${toEastern(posts.length)} ملخصات أعجبتك` : "الملخصات التي وضعت عليها إعجابًا.";
+    likesCount.textContent = label;
+  }
+  if (!likesFeed) return;
+  if (!posts.length) {
+    likesFeed.innerHTML = `<div class="empty">لم تضع إعجابًا بعد. اضغط «إعجاب» على أي ملخص.</div>`;
+    return;
+  }
+  likesFeed.innerHTML = posts.map(postCard).join("");
 }
 
 function filterSettings() {
@@ -281,6 +302,7 @@ function filterSettings() {
 function render() {
   renderAccounts();
   renderFeed();
+  renderLikes();
   filterSettings();
 }
 
@@ -301,12 +323,14 @@ function showView(next) {
   });
   if (narrowScreen()) setSidebar(false);
   document.querySelector("#view-summaries").hidden = next !== "summaries";
+  document.querySelector("#view-likes").hidden = next !== "likes";
   document.querySelector("#view-accounts").hidden = next !== "accounts";
   document.querySelector("#view-settings").hidden = next !== "settings";
   viewTitle.textContent = titles[next];
   filterSettings();
   if (next === "accounts") renderAccounts();
   if (next === "summaries") renderFeed();
+  if (next === "likes") renderLikes();
 }
 
 function cleanUsername(value) {
@@ -320,9 +344,11 @@ function applyLocalEdits() {
   if (apiAvailable) return;
   const hidden = new Set(JSON.parse(localStorage.getItem("rasd-hidden") || "[]"));
   const read = new Set(JSON.parse(localStorage.getItem("rasd-read") || "[]"));
+  const likes = new Set(JSON.parse(localStorage.getItem("rasd-likes") || "[]"));
   state.posts = state.posts.filter((post) => !hidden.has(post.id));
   state.posts.forEach((post) => {
     if (read.has(post.id)) post.unread = false;
+    if (likes.has(post.id)) post.liked = true;
   });
 }
 
@@ -445,10 +471,29 @@ accountList.addEventListener("click", async (event) => {
   }
 });
 
-feed.addEventListener("click", async (event) => {
+async function onFeedClick(event) {
   const copy = event.target.closest("[data-copy]");
   const read = event.target.closest("[data-read]");
   const remove = event.target.closest("[data-delete]");
+  const like = event.target.closest("[data-like]");
+  if (like) {
+    if (!apiAvailable) {
+      const key = "rasd-likes";
+      const ids = new Set(JSON.parse(localStorage.getItem(key) || "[]"));
+      if (ids.has(like.dataset.like)) ids.delete(like.dataset.like);
+      else ids.add(like.dataset.like);
+      localStorage.setItem(key, JSON.stringify([...ids]));
+      await loadState();
+      return;
+    }
+    await fetch(apiUrl("api/like"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: like.dataset.like, toggle: true }),
+    });
+    await loadState();
+    return;
+  }
   if (copy) {
     const post = state.posts.find((item) => item.id === copy.dataset.copy);
     if (post) copyText(post);
@@ -482,7 +527,10 @@ feed.addEventListener("click", async (event) => {
     await fetch(apiUrl(`api/posts?id=${encodeURIComponent(remove.dataset.delete)}`), { method: "DELETE" });
     await loadState();
   }
-});
+}
+
+feed.addEventListener("click", onFeedClick);
+likesFeed.addEventListener("click", onFeedClick);
 
 document.querySelectorAll(".switch").forEach((button) => {
   button.addEventListener("click", () => {
@@ -492,7 +540,7 @@ document.querySelectorAll(".switch").forEach((button) => {
     if (id === "toggle-compact") prefs.compact = !prefs.compact;
     if (id === "toggle-refresh") prefs.autoRefresh = !prefs.autoRefresh;
     savePrefs();
-    renderFeed();
+    render();
   });
 });
 

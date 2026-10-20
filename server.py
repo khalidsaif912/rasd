@@ -321,6 +321,9 @@ def sync_account(browser, username):
             post["rank"] = codes.index(post["id"]) if post["id"] in codes else 999
             with lock:
                 data = read_store()
+                previous = next((item for item in data["posts"] if item["id"] == post["id"]), None)
+                if previous and previous.get("liked"):
+                    post["liked"] = True
                 data["posts"] = [item for item in data["posts"] if item["id"] != post["id"]]
                 data["posts"].append(post)
                 rank = {code: index for index, code in enumerate(codes)}
@@ -468,6 +471,16 @@ class Handler(SimpleHTTPRequestHandler):
             for name in targets:
                 if name in names or name.lower() in [item.lower() for item in names]:
                     enqueue(name)
+            self.send_json({"ok": True})
+            return
+        if path == "/api/like":
+            post_id = str(body.get("id", ""))
+            with lock:
+                data = read_store()
+                for post in data["posts"]:
+                    if post["id"] == post_id:
+                        post["liked"] = not post.get("liked", False) if body.get("toggle") else True
+                write_store(data)
             self.send_json({"ok": True})
             return
         if path == "/api/seen":
