@@ -1,4 +1,3 @@
-data/store.json
 __pycache__/
 *.pyc
 _probe*

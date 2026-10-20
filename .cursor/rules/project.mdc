@@ -8,7 +8,9 @@ alwaysApply: true
 موقع عربي ثابت في هذا المجلد. يراقب حسابات إنستغرام يضيفها المستخدم، ويعرض كل ريل كملخص نصي بنفس شكل ريل هبة حمادة: عنوان، نقاط (اسم / عمر أو تصنيف / نصيحة)، ثم ملاحظة.
 
 - المثال الحي: https://www.instagram.com/reel/DetuEJJOj3y/ للحساب hiba.hamadeh.official
-- التشغيل: `python server.py` ثم http://127.0.0.1:8777/
+- الموقع المنشور: https://khalidsaif912.github.io/rasd/
+- قراءة إنستغرام على خوادم GitHub كل ساعة عبر `.github/workflows/sync.yml`
+- التشغيل المحلي: `python server.py` ثم http://127.0.0.1:8777/
 - التشغيل الدائم على هذا الجهاز: اختصار Rasd في مجلد Startup يشغّل scripts/keep_running.bat ويعيد تشغيل الخادم إذا توقف
 - المستودع: https://github.com/khalidsaif912/rasd
 - إضافة حساب عام تبدأ قراءة أحدث منشوراته الظاهرة وتلخيص نص كل منشور

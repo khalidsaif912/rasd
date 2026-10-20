@@ -1,7 +1,9 @@
 """خادم رصد: يقرأ المنشورات الظاهرة لحساب عام ويلخص نصها."""
 
 import json
+import os
 import re
+import sys
 import threading
 import time
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
@@ -479,7 +481,68 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_json({"error": "غير موجود"}, 404)
 
 
+def parse_command(raw):
+    text = (raw or "").strip()
+    action = "add"
+    lowered = text.lower()
+    if lowered.startswith("remove:"):
+        action = "remove"
+        text = text.split(":", 1)[1]
+    elif lowered.startswith("account:"):
+        text = text.split(":", 1)[1]
+    return action, clean_user(text)
+
+
+def prepare_issue():
+    if os.environ.get("EVENT") != "issues":
+        return
+    action, username = parse_command(os.environ.get("TITLE", ""))
+    if not username:
+        print("ignored issue")
+        return
+    data = read_store()
+    if action == "remove":
+        data["accounts"] = [account for account in data["accounts"] if account["username"].lower() != username.lower()]
+        data["posts"] = [post for post in data["posts"] if post["username"].lower() != username.lower()]
+    elif not any(account["username"].lower() == username.lower() for account in data["accounts"]):
+        data["accounts"].append(
+            {
+                "username": username,
+                "name": username,
+                "verified": False,
+                "status": "بانتظار القراءة",
+                "syncing": False,
+                "updatedAt": "",
+            }
+        )
+    write_store(data)
+    print(f"{action} {username}")
+
+
+def sync_once():
+    data = read_store()
+    names = [account["username"] for account in data["accounts"]]
+    if not names:
+        print("no accounts")
+        return
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = launch_browser(playwright)
+        try:
+            for username in names:
+                sync_account(browser, username)
+        finally:
+            browser.close()
+
+
 def main():
+    if "--prepare" in sys.argv:
+        prepare_issue()
+        return
+    if "--sync" in sys.argv:
+        sync_once()
+        return
     try:
         server = ThreadingHTTPServer((HOST, PORT), Handler)
     except OSError:

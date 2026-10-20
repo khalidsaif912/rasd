@@ -10,6 +10,7 @@ let query = "";
 let view = "summaries";
 let prefs = loadPrefs();
 let timer = 0;
+let apiAvailable = false;
 let seenIds = loadSeen();
 let arrivalsReady = localStorage.getItem(SEEN_KEY) !== null;
 
@@ -302,19 +303,56 @@ function showView(next) {
   if (next === "summaries") renderFeed();
 }
 
+function cleanUsername(value) {
+  let text = String(value || "").trim().replace(/^@/, "");
+  if (text.includes("instagram.com/")) text = text.split("instagram.com/")[1].split("/")[0];
+  text = text.split("?")[0].trim();
+  return /^[A-Za-z0-9._]{1,30}$/.test(text) ? text : "";
+}
+
+function githubIssue(title) {
+  const url = new URL("https://github.com/khalidsaif912/rasd/issues/new");
+  url.searchParams.set("title", title);
+  url.searchParams.set("body", "متابعة من موقع رصد");
+  window.open(url.toString(), "_blank", "noopener");
+}
+
+function applyLocalEdits() {
+  if (apiAvailable) return;
+  const hidden = new Set(JSON.parse(localStorage.getItem("rasd-hidden") || "[]"));
+  const read = new Set(JSON.parse(localStorage.getItem("rasd-read") || "[]"));
+  state.posts = state.posts.filter((post) => !hidden.has(post.id));
+  state.posts.forEach((post) => {
+    if (read.has(post.id)) post.unread = false;
+  });
+}
+
 async function loadState() {
-  const response = await fetch("/api/state", { cache: "no-store" });
+  let response = null;
+  try {
+    response = await fetch("api/state", { cache: "no-store" });
+  } catch (_) {
+    response = null;
+  }
+  if (response && response.ok) {
+    apiAvailable = true;
+  } else {
+    apiAvailable = false;
+    response = await fetch(`data/store.json?t=${Date.now()}`, { cache: "no-store" });
+  }
   if (!response.ok) throw new Error("state");
   state = await response.json();
+  applyLocalEdits();
   if (filter !== "all" && !state.accounts.some((account) => account.username === filter)) filter = "all";
   noteArrivals();
   render();
+  schedule();
 }
 
 function schedule() {
   clearInterval(timer);
   if (!prefs.autoRefresh) return;
-  timer = setInterval(() => loadState().catch(() => {}), 4000);
+  timer = setInterval(() => loadState().catch(() => {}), apiAvailable ? 4000 : 60000);
 }
 
 document.querySelectorAll("[data-nav]").forEach((button) => {
@@ -332,12 +370,23 @@ document.querySelector("#account-form").addEventListener("submit", async (event)
   event.preventDefault();
   const input = document.querySelector("#account-input");
   const button = document.querySelector("#add-account");
+  const username = cleanUsername(input.value);
+  if (!username) {
+    showToast("اسم الحساب غير واضح");
+    return;
+  }
+  if (!apiAvailable) {
+    githubIssue(`account: ${username}`);
+    input.value = "";
+    showToast("أكّد الإضافة في الصفحة التي فُتحت");
+    return;
+  }
   button.disabled = true;
   try {
-    const response = await fetch("/api/accounts", {
+    const response = await fetch("api/accounts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: input.value }),
+      body: JSON.stringify({ username }),
     });
     const payload = await response.json();
     if (!response.ok) {
@@ -355,7 +404,12 @@ document.querySelector("#account-form").addEventListener("submit", async (event)
 });
 
 async function refreshNow() {
-  await fetch("/api/refresh", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  if (!apiAvailable) {
+    showToast("خوادم GitHub تراجع الحسابات كل ساعة");
+    loadState().catch(() => {});
+    return;
+  }
+  await fetch("api/refresh", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   showToast("بدأ التحديث");
   loadState();
 }
@@ -379,7 +433,12 @@ accountList.addEventListener("click", async (event) => {
   const remove = event.target.closest("[data-remove-account]");
   const open = event.target.closest("[data-open-account]");
   if (remove) {
-    await fetch(`/api/accounts?username=${encodeURIComponent(remove.dataset.removeAccount)}`, { method: "DELETE" });
+    if (!apiAvailable) {
+      githubIssue(`remove: ${remove.dataset.removeAccount}`);
+      showToast("أكّد الإزالة في الصفحة التي فُتحت");
+      return;
+    }
+    await fetch(`api/accounts?username=${encodeURIComponent(remove.dataset.removeAccount)}`, { method: "DELETE" });
     await loadState();
     return;
   }
@@ -399,7 +458,16 @@ feed.addEventListener("click", async (event) => {
     if (post) copyText(post);
   }
   if (read) {
-    await fetch("/api/seen", {
+    if (!apiAvailable) {
+      const key = "rasd-read";
+      const ids = new Set(JSON.parse(localStorage.getItem(key) || "[]"));
+      if (ids.has(read.dataset.read)) ids.delete(read.dataset.read);
+      else ids.add(read.dataset.read);
+      localStorage.setItem(key, JSON.stringify([...ids]));
+      await loadState();
+      return;
+    }
+    await fetch("api/seen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: read.dataset.read, toggle: true }),
@@ -407,7 +475,15 @@ feed.addEventListener("click", async (event) => {
     await loadState();
   }
   if (remove) {
-    await fetch(`/api/posts?id=${encodeURIComponent(remove.dataset.delete)}`, { method: "DELETE" });
+    if (!apiAvailable) {
+      const key = "rasd-hidden";
+      const ids = new Set(JSON.parse(localStorage.getItem(key) || "[]"));
+      ids.add(remove.dataset.delete);
+      localStorage.setItem(key, JSON.stringify([...ids]));
+      await loadState();
+      return;
+    }
+    await fetch(`api/posts?id=${encodeURIComponent(remove.dataset.delete)}`, { method: "DELETE" });
     await loadState();
   }
 });
@@ -426,5 +502,5 @@ document.querySelectorAll(".switch").forEach((button) => {
 
 applyPrefs();
 loadState().catch(() => {
-  feed.innerHTML = `<div class="empty">شغّل الخادم بالأمر python server.py ثم افتح http://127.0.0.1:8777/</div>`;
+  feed.innerHTML = `<div class="empty">تعذر تحميل الملخصات.</div>`;
 });
