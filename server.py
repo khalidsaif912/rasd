@@ -8,7 +8,8 @@ import threading
 import time
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+import urllib.request
+from urllib.parse import parse_qs, quote, unquote, urlencode, urlparse
 
 ROOT = Path(__file__).resolve().parent
 STORE_PATH = ROOT / "data" / "store.json"
@@ -202,6 +203,71 @@ def dismiss(page):
             pass
 
 
+def fetch_text(url):
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=25) as response:
+        return response.read().decode("utf-8", "replace")
+
+
+def indexed_codes(username):
+    found = []
+    seen = set()
+    for kind in ("reel", "p"):
+        query = urlencode({"q": f"site:instagram.com/{username}/{kind}"})
+        try:
+            body = fetch_text("https://html.duckduckgo.com/html/?" + query)
+        except Exception:
+            continue
+        for raw in re.findall(r"uddg=([^&\"']+)", body):
+            address = unquote(raw)
+            match = re.search(
+                rf"instagram\.com/{re.escape(username)}/(reel|p)/([^/?#]+)",
+                address,
+                re.IGNORECASE,
+            )
+            if not match:
+                continue
+            code = match.group(2)
+            if code in seen:
+                continue
+            seen.add(code)
+            found.append((match.group(1).lower(), code))
+    return found
+
+
+def post_from_oembed(username, kind, code):
+    url = f"https://www.instagram.com/{kind}/{code}/"
+    try:
+        raw = fetch_text("https://www.instagram.com/api/v1/oembed/?url=" + quote(url, safe=""))
+        data = json.loads(raw)
+    except Exception:
+        return None
+    caption = (data.get("title") or "").strip()
+    summary = summarize(caption)
+    media = str(data.get("media_id") or "0").split("_", 1)[0]
+    try:
+        order = int(media)
+    except ValueError:
+        order = 0
+    return {
+        "id": code,
+        "username": username,
+        "url": url,
+        "when": "",
+        "kind": "ريل" if kind == "reel" else "منشور",
+        "unread": True,
+        "settled": True,
+        "order": order,
+        **summary,
+    }
+
+
 def profile_links(page, username):
     page.goto(f"https://www.instagram.com/{username}/", wait_until="domcontentloaded", timeout=45000)
     page.wait_for_timeout(2500)
@@ -268,6 +334,45 @@ def sync_account(browser, username):
         if not codes:
             private = "خاص" in body or "This account is private" in body
             blocked = any(marker in body for marker in ("تسجيل الدخول", "Log in", "Log into Instagram", "See everyday moments"))
+            if not private:
+                found = indexed_codes(username)
+                posts = []
+                for kind, code in found:
+                    post = post_from_oembed(username, kind, code)
+                    if post:
+                        posts.append(post)
+                    time.sleep(0.3)
+                if posts:
+                    posts.sort(key=lambda item: item.get("order", 0), reverse=True)
+                    codes = [item["id"] for item in posts]
+                    for rank, post in enumerate(posts):
+                        post.pop("order", None)
+                        post["rank"] = rank
+                        update_account(username, status=f"يلخص {rank + 1} من {len(posts)}", name=name, verified=verified)
+                        with lock:
+                            data = read_store()
+                            previous = next((item for item in data["posts"] if item["id"] == post["id"]), None)
+                            if previous and (previous.get("points") or previous.get("summary") or previous.get("note")):
+                                continue
+                            if previous and previous.get("liked"):
+                                post["liked"] = True
+                            if previous and previous.get("when"):
+                                post["when"] = previous["when"]
+                            if previous:
+                                post["unread"] = previous.get("unread", True)
+                            data["posts"] = [item for item in data["posts"] if item["id"] != post["id"]]
+                            data["posts"].append(post)
+                            data["posts"].sort(key=lambda item: item.get("rank", 999))
+                            write_store(data)
+                    update_account(
+                        username,
+                        syncing=False,
+                        status="محدّث",
+                        name=name,
+                        verified=verified,
+                        updatedAt=time.strftime("%H:%M"),
+                    )
+                    return
             with lock:
                 has_posts = any(post["username"].lower() == username.lower() for post in read_store()["posts"])
             if private:
