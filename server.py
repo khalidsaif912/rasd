@@ -423,8 +423,13 @@ def video_lines(page, code):
 
 
 def summary_from_video(lines, caption):
-    video = summarize("\n".join(lines))
-    rest = [line for line in lines if line != video.get("title")]
+    def decent(line):
+        letters = len(re.findall(r"[A-Za-z\u0600-\u06FF]", line))
+        return letters >= 6 and letters / max(len(line), 1) >= 0.45
+
+    chosen = [line for line in lines if decent(line)] or lines
+    video = summarize("\n".join(chosen))
+    rest = [line for line in chosen if line != video.get("title")]
     video["summary"] = "\n".join(rest)
     if caption:
         extra = summarize(caption)
@@ -583,7 +588,14 @@ def sync_account(browser, username):
             return
         for index, href in enumerate(reversed(ordered), start=1):
             update_account(username, status=f"يلخص {index} من {total}", name=name, verified=verified)
-            post = read_post(page, username, href)
+            try:
+                post = read_post(page, username, href)
+            except Exception as exc:
+                error_path = Path(os.environ.get("TEMP", "/tmp")) / "rasd-home" / "sync-error.txt"
+                error_path.parent.mkdir(parents=True, exist_ok=True)
+                with error_path.open("a", encoding="utf-8") as handle:
+                    handle.write(f"{username} {href} {exc}\n")
+                continue
             if not post:
                 continue
             post["rank"] = codes.index(post["id"]) if post["id"] in codes else 999
@@ -616,7 +628,11 @@ def sync_account(browser, username):
             verified=verified,
             updatedAt=time.strftime("%H:%M"),
         )
-    except Exception:
+    except Exception as exc:
+        error_path = Path(os.environ.get("TEMP", "/tmp")) / "rasd-home" / "sync-error.txt"
+        error_path.parent.mkdir(parents=True, exist_ok=True)
+        with error_path.open("a", encoding="utf-8") as handle:
+            handle.write(f"{username} {exc}\n")
         update_account(username, syncing=False, status="تعذر قراءة الحساب، أعد المحاولة")
     finally:
         page.close()
