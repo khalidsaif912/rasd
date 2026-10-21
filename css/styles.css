@@ -579,7 +579,17 @@ html.dark .toast { background: rgba(242, 242, 247, 0.94); color: #1c1c1e; }
 
 @media (min-width: 1280px) {
   .content > * { width: min(100%, 1080px); }
-  .feed { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .feed {
+    display: block;
+    columns: 2;
+    column-gap: 14px;
+  }
+  .feed .card {
+    break-inside: avoid;
+    width: 100%;
+    margin-bottom: 14px;
+  }
+  html.compact .feed .card { margin-bottom: 8px; }
 }
 
 @media (min-width: 1800px) {
