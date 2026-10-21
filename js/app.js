@@ -406,8 +406,10 @@ function render() {
   filterSettings();
 }
 
+const narrowQuery = window.matchMedia("(max-width: 760px)");
+
 function narrowScreen() {
-  return window.matchMedia("(max-width: 800px)").matches;
+  return narrowQuery.matches;
 }
 
 function setSidebar(open) {
@@ -490,6 +492,7 @@ document.querySelector("#sidebar-toggle").addEventListener("click", () => {
 document.querySelector("#sidebar-scrim").addEventListener("click", () => setSidebar(false));
 document.querySelector("#arrival").addEventListener("click", dismissArrivals);
 setSidebar(!narrowScreen());
+narrowQuery.addEventListener("change", () => setSidebar(!narrowScreen()));
 
 document.querySelector("#account-form").addEventListener("submit", async (event) => {
   event.preventDefault();

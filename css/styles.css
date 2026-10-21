@@ -38,7 +38,7 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: Inter, "IBM Plex Sans Arabic", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-  font-size: 1rem;
+  font-size: clamp(15px, 0.25vw + 14px, 17px);
   line-height: 1.35;
 }
 
@@ -57,7 +57,7 @@ button { cursor: pointer; }
   border: 0;
 }
 
-.app { min-height: 100vh; }
+.app { min-height: 100vh; min-height: 100dvh; }
 
 .sidebar {
   position: fixed;
@@ -66,6 +66,7 @@ button { cursor: pointer; }
   inset-inline-start: 0;
   width: var(--nav);
   height: 100vh;
+  height: 100dvh;
   padding: 28px 14px;
   background: var(--sidebar);
   border-inline-end: 1px solid var(--line);
@@ -177,8 +178,12 @@ html.dark .galaxy-handle {
 
 .content {
   min-width: 0;
-  padding: 28px 32px 72px;
-  max-width: 860px;
+  padding: clamp(20px, 2.4vw, 40px);
+  padding-bottom: 72px;
+}
+.content > * {
+  width: min(100%, 760px);
+  margin-inline: auto;
 }
 
 .content-head {
@@ -378,7 +383,8 @@ html.compact .summary { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box
   font-weight: 700;
   flex: none;
 }
-.card h3 { margin: 12px 0 0; font-size: 1.25rem; letter-spacing: -0.03em; line-height: 1.35; }
+.card h3 { margin: 12px 0 0; font-size: clamp(1.05rem, 1.4vw, 1.25rem); letter-spacing: -0.03em; line-height: 1.35; overflow-wrap: anywhere; }
+.subtitle, .summary, .points p, .note { overflow-wrap: anywhere; }
 .subtitle { margin: 4px 0 0; color: var(--secondary); }
 .points { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
 .points li {
@@ -566,14 +572,35 @@ html.dark .age { color: #ffb340; }
 html.dark .toast { background: rgba(242, 242, 247, 0.94); color: #1c1c1e; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-@media (max-width: 800px) {
+@media (min-width: 1100px) {
+  .content > * { width: min(100%, 920px); }
+  .account-row { flex-wrap: nowrap; }
+}
+
+@media (min-width: 1280px) {
+  .content > * { width: min(100%, 1080px); }
+  .feed { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+
+@media (min-width: 1800px) {
+  .content > * { width: min(100%, 1240px); }
+}
+
+@media (max-width: 1100px) {
+  .account-row { flex-wrap: wrap; align-items: center; }
+  .account-open { flex: 1 1 16rem; }
+  .account-actions { margin-inline-start: auto; }
+}
+
+@media (max-width: 760px) {
   html, body { overflow-x: hidden; }
   .content, .app.sidebar-closed .content {
     margin-inline-start: 0;
     max-width: none;
-    padding: 12px 12px calc(96px + env(safe-area-inset-bottom));
-    padding-inline-start: 30px;
+    padding: 12px max(12px, env(safe-area-inset-left), env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom));
+    padding-inline-start: max(30px, env(safe-area-inset-left), env(safe-area-inset-right));
   }
+  .content > * { width: 100%; }
   h1 { font-size: 1.45rem; }
   .card { padding: 12px; }
   .card h3, .subtitle, .summary, .points p, .note { overflow-wrap: anywhere; }
@@ -584,7 +611,8 @@ html.dark .toast { background: rgba(242, 242, 247, 0.94); color: #1c1c1e; }
   .ig-actions { gap: 0; }
   .ig-btn { width: 44px; height: 44px; }
   .toolbar { align-items: stretch; flex-direction: column; }
-  .filters { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; padding-bottom: 4px; }
+  .filters { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; padding-bottom: 4px; scrollbar-width: none; }
+  .filters::-webkit-scrollbar { display: none; }
   .chip { flex: none; min-height: 40px; }
   .field input, .block-btn, .remove { min-height: 44px; }
   .account-row { flex-wrap: wrap; align-items: center; gap: 4px; }
@@ -642,8 +670,23 @@ html.dark .toast { background: rgba(242, 242, 247, 0.94); color: #1c1c1e; }
 }
 
 @media (max-width: 380px) {
-  .content, .app.sidebar-closed .content { padding-inline-end: 10px; padding-inline-start: 26px; }
+  .content, .app.sidebar-closed .content {
+    padding-inline-end: max(10px, env(safe-area-inset-left), env(safe-area-inset-right));
+    padding-inline-start: max(26px, env(safe-area-inset-left), env(safe-area-inset-right));
+  }
   h1 { font-size: 1.3rem; }
+  .ig-btn { width: 40px; height: 40px; }
+  .tab { font-size: 0.62rem; }
+  .account-row .similar span { max-width: 7.5rem; }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .content, .app.sidebar-closed .content { padding-top: 8px; padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  .content-head { margin-bottom: 10px; }
+  .tab { min-height: 40px; padding-block: 4px; }
+  .tabbar { padding-top: 2px; padding-bottom: calc(4px + env(safe-area-inset-bottom)); }
+  .toast { bottom: 64px; }
+  .galaxy-handle { bottom: calc(60px + env(safe-area-inset-bottom)); height: 56px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
