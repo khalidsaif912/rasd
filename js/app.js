@@ -540,6 +540,40 @@ async function refreshNow() {
 document.querySelector("#refresh-all").addEventListener("click", refreshNow);
 document.querySelector("#settings-refresh").addEventListener("click", refreshNow);
 
+const installGroup = document.querySelector("#install-group");
+const installButton = document.querySelector("#install-app");
+const installHint = document.querySelector("#install-hint");
+let installEvent = null;
+const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  installEvent = event;
+  installGroup.hidden = false;
+});
+
+installButton.addEventListener("click", async () => {
+  if (!installEvent) {
+    showToast("من مشاركة المتصفح اختر إضافة إلى الشاشة الرئيسية");
+    return;
+  }
+  installEvent.prompt();
+  const choice = await installEvent.userChoice;
+  installEvent = null;
+  installGroup.hidden = true;
+  if (choice.outcome === "accepted") showToast("تم التثبيت");
+});
+
+if (!standalone && ios) {
+  installHint.textContent = "من مشاركة المتصفح: إضافة إلى الشاشة الرئيسية";
+  installGroup.hidden = false;
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
 document.querySelector("#search").addEventListener("input", (event) => {
   query = event.target.value;
   render();

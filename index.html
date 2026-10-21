@@ -3,7 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>رصد — الإعدادات</title>
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1C1C1E" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="رصد">
+  <title>رصد</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -173,6 +182,21 @@
           <p class="footnote">تُقرأ الفيديوهات العامة ويُلخَّص ما يظهر داخلها، من دون متابعة الحساب. عند وصول فيديو جديد يظهر إشعار بعدده. الحسابات الخاصة تبقى خارج القراءة.</p>
         </section>
 
+        <section class="group" id="install-group" data-group="install" hidden>
+          <h2>التطبيق</h2>
+          <div class="inset">
+            <button class="row button-row" id="install-app" type="button" data-search="تثبيت التطبيق">
+              <span class="sq blue" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 4v10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m8 10 4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 18h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </span>
+              <span class="row-copy">
+                <strong>تثبيت رصد</strong>
+                <small id="install-hint">يفتح كتطبيق على هذا الجهاز</small>
+              </span>
+            </button>
+          </div>
+        </section>
+
         <section class="group" data-group="about">
           <h2>حول</h2>
           <div class="inset">
@@ -213,6 +237,6 @@
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="js/app.js?v=video"></script>
+  <script src="js/app.js?v=install"></script>
 </body>
 </html>
